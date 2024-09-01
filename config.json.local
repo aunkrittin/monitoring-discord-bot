@@ -1,5 +1,5 @@
 {
-  "token": "xxxx",
+  "token": "xxxx", // Discord bot token
   "channelId": "xxxx",
   "proxmoxApiUrl": "https://proxmox.icutmyhair.space",
   "proxmoxApiToken": "xxxx",
