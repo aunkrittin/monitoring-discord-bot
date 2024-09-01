@@ -1,6 +1,6 @@
 {
   "token": "xxxx", // Discord bot token
-  "channelId": "xxxx",
+  "channelId": "xxxx", // Discord channel id
   "proxmoxApiUrl": "https://proxmox.icutmyhair.space",
   "proxmoxApiToken": "xxxx",
   "instatusApiUrl": "https://api.instatus.com",
