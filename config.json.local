@@ -1,0 +1,58 @@
+{
+  "token": "xxxx",
+  "channelId": "xxxx",
+  "proxmoxApiUrl": "https://proxmox.icutmyhair.space",
+  "proxmoxApiToken": "xxxx",
+  "instatusApiUrl": "https://api.instatus.com",
+  "instatusApiToken": "xxxx",
+  "instatusPageId": "xxxx",
+  "data": {
+    "main": {
+      "hostname": "Proxmox",
+      "type": "port",
+      "server": "10.0.0.5",
+      "port": "8006"
+    },
+    "CasaOS": {
+      "hostname": "CasaOS",
+      "type": "website",
+      "server": "https://casaos.icutmyhair.space",
+      "component_id": "clxd3db5p9151b4oh99nrko4y",
+      "current_status": "OPERATIONAL"
+    },
+    "Crafty": {
+      "hostname": "Crafty",
+      "type": "website",
+      "server": "https://crafty.icutmyhair.space",
+      "component_id": "clxd0dbaf45997b6ng9bqd1s9p",
+      "current_status": "UNDERMAINTENANCE"
+    },
+    "RLCraft01": {
+      "hostname": "RLCraft01",
+      "type": "port",
+      "server": "icutmyhair.space",
+      "port": "25565",
+      "component_id": "clxd0cm6545666b6ngrbyi5b4e",
+      "current_status": "OPERATIONAL"
+    },
+    "RLCraft02": {
+      "hostname": "RLCraft02",
+      "type": "port",
+      "server": "icutmyhair.space",
+      "port": "25566",
+      "component_id": "clxd0cufl45783b6ngxg9tvyjw",
+      "current_status": "OPERATIONAL"
+    }
+  },
+  "messageIDs": {
+    "main": "1250665796489969747",
+    "detail": "1250665804417204255"
+  },
+  "component_statuses": [
+    "OPERATIONAL",
+    "UNDERMAINTENANCE",
+    "DEGRADEDPERFORMANCE",
+    "PARTIALOUTAGE",
+    "MAJOROUTAGE"
+  ]
+}
