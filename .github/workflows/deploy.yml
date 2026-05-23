@@ -39,10 +39,13 @@ jobs:
       - name: Validate config files
         run: node -e "require('./dist/src/config').loadConfig(); console.log('config ok')"
 
-      - name: Start bot
+      - name: Start or reload bot
         run: |
-          pm2 delete bot-discord || true
-          pm2 start ecosystem.config.cjs --env production --update-env
+          if pm2 describe bot-discord >/dev/null 2>&1; then
+            pm2 reload ecosystem.config.cjs --env production --update-env
+          else
+            pm2 start ecosystem.config.cjs --env production --update-env
+          fi
 
       - name: Save PM2 process list
         run: pm2 save
