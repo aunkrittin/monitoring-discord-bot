@@ -10,6 +10,9 @@ concurrency:
   group: deploy-bot
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on:
@@ -17,14 +20,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           clean: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -33,5 +36,12 @@ jobs:
       - name: Validate config files
         run: node -e "JSON.parse(require('fs').readFileSync('config.services.json', 'utf8'))"
 
-      - name: Restart bot
-        run: pm2 restart bot-discord --update-env
+      - name: Start or restart bot
+        run: pm2 startOrRestart ecosystem.config.cjs --env production --update-env
+
+      - name: Save PM2 process list
+        run: pm2 save
+
+      - name: Verify bot is online
+        run: |
+          node -e "const { execSync } = require('child_process'); const apps = JSON.parse(execSync('pm2 jlist', { encoding: 'utf8' })); const app = apps.find((item) => item.name === 'bot-discord'); if (!app) { throw new Error('bot-discord is not registered in PM2'); } if (app.pm2_env.status !== 'online') { console.error(execSync('pm2 describe bot-discord', { encoding: 'utf8' })); throw new Error(\`bot-discord is ${app.pm2_env.status}, expected online\`); } console.log('bot-discord is online');"
