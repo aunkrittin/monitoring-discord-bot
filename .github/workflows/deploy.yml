@@ -31,9 +31,7 @@ jobs:
         run: npm ci
 
       - name: Validate config files
-        run: |
-          test -f .env
-          node -e "JSON.parse(require('fs').readFileSync('config.services.json', 'utf8'))"
+        run: node -e "JSON.parse(require('fs').readFileSync('config.services.json', 'utf8'))"
 
       - name: Restart bot
         run: pm2 restart bot-discord --update-env
