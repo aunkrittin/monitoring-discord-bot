@@ -39,21 +39,31 @@ jobs:
       - name: Validate config files
         run: node -e "require('./dist/src/config').loadConfig(); console.log('config ok')"
 
-      - name: Start or restart bot
-        run: pm2 startOrRestart ecosystem.config.cjs --env production --update-env
+      - name: Start bot
+        run: |
+          pm2 delete bot-discord || true
+          pm2 start ecosystem.config.cjs --env production --update-env
 
       - name: Save PM2 process list
         run: pm2 save
 
       - name: Verify bot is online
         run: |
+          sleep 5
           node <<'NODE'
+          const path = require("path");
           const { execSync } = require("child_process");
 
           const apps = JSON.parse(execSync("pm2 jlist", { encoding: "utf8" }));
           const app = apps.find((item) => item.name === "bot-discord");
           if (!app) {
             throw new Error("bot-discord is not registered in PM2");
+          }
+
+          const expectedScript = path.resolve("dist/index.js");
+          if (app.pm2_env.pm_exec_path !== expectedScript) {
+            console.error(execSync("pm2 describe bot-discord", { encoding: "utf8" }));
+            throw new Error(`bot-discord is running ${app.pm2_env.pm_exec_path}, expected ${expectedScript}`);
           }
 
           if (app.pm2_env.status !== "online") {
