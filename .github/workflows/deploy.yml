@@ -44,4 +44,19 @@ jobs:
 
       - name: Verify bot is online
         run: |
-          node -e "const { execSync } = require('child_process'); const apps = JSON.parse(execSync('pm2 jlist', { encoding: 'utf8' })); const app = apps.find((item) => item.name === 'bot-discord'); if (!app) { throw new Error('bot-discord is not registered in PM2'); } if (app.pm2_env.status !== 'online') { console.error(execSync('pm2 describe bot-discord', { encoding: 'utf8' })); throw new Error(\`bot-discord is ${app.pm2_env.status}, expected online\`); } console.log('bot-discord is online');"
+          node <<'NODE'
+          const { execSync } = require("child_process");
+
+          const apps = JSON.parse(execSync("pm2 jlist", { encoding: "utf8" }));
+          const app = apps.find((item) => item.name === "bot-discord");
+          if (!app) {
+            throw new Error("bot-discord is not registered in PM2");
+          }
+
+          if (app.pm2_env.status !== "online") {
+            console.error(execSync("pm2 describe bot-discord", { encoding: "utf8" }));
+            throw new Error(`bot-discord is ${app.pm2_env.status}, expected online`);
+          }
+
+          console.log("bot-discord is online");
+          NODE
