@@ -1,22 +1,24 @@
-const { Client, GatewayIntentBits } = require("discord.js");
-const { loadConfig } = require("./src/config");
+import { Client, GatewayIntentBits } from "discord.js";
+import { loadConfig } from "./src/config";
+import { loadHandlers } from "./src/loader";
+import type { BotClient } from "./src/types";
 
 const { config, runtimeConfig, runtimeConfigPath } = loadConfig();
 
-async function startBot() {
-  global.client = new Client({
+async function startBot(): Promise<void> {
+  const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
     ],
-    disableMentions: "everyone",
-  });
+  }) as BotClient;
 
   client.config = config;
   client.runtimeConfig = runtimeConfig;
   client.runtimeConfigPath = runtimeConfigPath;
-  require("./src/loader"); // Ensure the loader is imported
+
+  loadHandlers(client);
   await client.login(client.config.token);
 }
 

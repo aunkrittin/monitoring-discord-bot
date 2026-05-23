@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "bot-discord",
-      script: "index.js",
+      script: "dist/index.js",
       cwd: __dirname,
       instances: 1,
       exec_mode: "fork",
