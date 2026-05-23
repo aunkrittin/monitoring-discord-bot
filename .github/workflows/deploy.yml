@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Validate config files
-        run: node -e "JSON.parse(require('fs').readFileSync('config.services.json', 'utf8'))"
+        run: node -e "require('./src/config').loadConfig(); console.log('config ok')"
 
       - name: Start or restart bot
         run: pm2 startOrRestart ecosystem.config.cjs --env production --update-env
