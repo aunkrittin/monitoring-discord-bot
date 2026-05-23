@@ -2,9 +2,14 @@ const axios = require("axios");
 const net = require("net");
 const ping = require("ping");
 
+const REQUEST_TIMEOUT_MS = 5000;
+const SOCKET_TIMEOUT_MS = 2000;
+
 async function checkWebsiteStatus(serverUrl) {
   try {
-    const response = await axios.get(serverUrl);
+    const response = await axios.get(serverUrl, {
+      timeout: REQUEST_TIMEOUT_MS,
+    });
     return {
       status: response.status,
       data: response.data,
@@ -50,18 +55,21 @@ async function checkWebsiteStatus(serverUrl) {
 async function checkGameServerStatus(host, port) {
   return new Promise((resolve) => {
     const socket = new net.Socket();
-    socket.setTimeout(2000);
-    socket.on("connect", () => {
+    let resolved = false;
+
+    const finish = (status) => {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
       socket.destroy();
-      resolve({ status: 200 });
-    });
-    socket.on("timeout", () => {
-      socket.destroy();
-      resolve({ status: "timeout" });
-    });
-    socket.on("error", () => {
-      resolve({ status: "error" });
-    });
+      resolve({ status });
+    };
+
+    socket.setTimeout(SOCKET_TIMEOUT_MS);
+    socket.once("connect", () => finish(200));
+    socket.once("timeout", () => finish("timeout"));
+    socket.once("error", () => finish("error"));
     socket.connect(port, host);
   });
 }
@@ -83,28 +91,29 @@ async function getPing(server, type, port) {
   try {
     const hostname = extractHostname(server);
     if (type === "website") {
-      const res = await ping.promise.probe(hostname);
+      const res = await ping.promise.probe(hostname, {
+        timeout: SOCKET_TIMEOUT_MS / 1000,
+      });
       return res.time === "unknown" ? "N/A" : res.time.toFixed(0);
     } else if (type === "port") {
       return new Promise((resolve) => {
         const start = Date.now();
         const socket = new net.Socket();
-        socket.setTimeout(2000);
+        let resolved = false;
 
-        socket.on("connect", () => {
-          const end = Date.now();
+        const finish = (value) => {
+          if (resolved) {
+            return;
+          }
+          resolved = true;
           socket.destroy();
-          resolve(end - start);
-        });
+          resolve(value);
+        };
 
-        socket.on("timeout", () => {
-          socket.destroy();
-          resolve("N/A");
-        });
-
-        socket.on("error", () => {
-          resolve("N/A");
-        });
+        socket.setTimeout(SOCKET_TIMEOUT_MS);
+        socket.once("connect", () => finish(Date.now() - start));
+        socket.once("timeout", () => finish("N/A"));
+        socket.once("error", () => finish("N/A"));
 
         socket.connect(port, hostname);
       });
@@ -115,44 +124,8 @@ async function getPing(server, type, port) {
   }
 }
 
-async function updateInstatusComponent(
-  componentId,
-  newStatus,
-  currentStatus,
-  instatusApiUrl,
-  instatusApiToken,
-  instatusPageId
-) {
-  if (newStatus === currentStatus) {
-    return; // No need to update if the status is the same
-  }
-
-  const url = `${instatusApiUrl}/v1/${instatusPageId}/components/${componentId}`;
-  try {
-    await axios.put(
-      url,
-      {
-        status: newStatus,
-        internalStatus: newStatus,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${instatusApiToken}`,
-        },
-      }
-    );
-    console.log(`Updated status of component ${componentId} to ${newStatus}`);
-  } catch (error) {
-    console.error(
-      `Failed to update status of component ${componentId}:`,
-      error
-    );
-  }
-}
-
 module.exports = {
   checkWebsiteStatus,
   checkGameServerStatus,
   getPing,
-  updateInstatusComponent,
 };

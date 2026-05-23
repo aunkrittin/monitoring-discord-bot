@@ -1,0 +1,15 @@
+{
+  "data": {
+    "main": {
+      "hostname": "Proxmox",
+      "type": "port",
+      "server": "10.0.0.5",
+      "port": "8006"
+    },
+    "CasaOS": {
+      "hostname": "CasaOS",
+      "type": "website",
+      "server": "https://casaos.icutmyhair.dev"
+    }
+  }
+}

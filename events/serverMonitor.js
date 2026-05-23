@@ -2,14 +2,12 @@ const {
   checkWebsiteStatus,
   checkGameServerStatus,
   getPing,
-  updateInstatusComponent,
 } = require("../src/monitor");
 const { EmbedBuilder } = require("discord.js");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const cron = require("node-cron");
-const configPath = path.resolve(__dirname, "../config.json");
 
 module.exports = async (client) => {
   const channel = await client.channels.fetch(client.config.channelId);
@@ -17,6 +15,8 @@ module.exports = async (client) => {
     console.log("Channel not found");
     return;
   }
+
+  let isUpdating = false;
 
   // Create or fetch main and detail messages
   if (!client.config.messageIDs.main) {
@@ -26,9 +26,8 @@ module.exports = async (client) => {
     await createDetailMessage(channel);
   }
 
-  updateServerStatuses();
+  await updateServerStatuses();
 
-  // setInterval(updateServerStatuses, 60000);
   // Schedule the task to run every minute
   cron.schedule("* * * * *", updateServerStatuses);
 
@@ -65,7 +64,23 @@ module.exports = async (client) => {
   }
 
   async function updateServerStatuses() {
-    const channel = await client.channels.fetch(client.config.channelId);
+    if (isUpdating) {
+      console.log("Skipping status update because the previous run is still active");
+      return;
+    }
+
+    isUpdating = true;
+
+    try {
+      await updateServerStatusEmbeds();
+    } catch (error) {
+      console.error("Failed to update server statuses:", error);
+    } finally {
+      isUpdating = false;
+    }
+  }
+
+  async function updateServerStatusEmbeds() {
     const mainFields = [];
     const detailFields = [];
 
@@ -75,7 +90,11 @@ module.exports = async (client) => {
     for (const [serverKey, serverConfig] of Object.entries(
       client.config.data
     )) {
-      let statusData;
+      let statusData = {
+        status: "unknown",
+        statusDescription: "Unsupported monitor type",
+      };
+
       if (serverConfig.type === "website") {
         statusData = await checkWebsiteStatus(serverConfig.server);
       } else if (serverConfig.type === "port") {
@@ -91,10 +110,6 @@ module.exports = async (client) => {
           : statusData.statusDescription || "Offline";
       const icon = statusData.status === 200 ? ":white_check_mark:" : ":x:";
       const hostname = serverConfig.hostname;
-      const ip =
-        statusData.status === 200 && serverConfig.type !== "website"
-          ? `${serverConfig.server}:${serverConfig.port}`
-          : "None";
 
       if (serverKey === "main") {
         mainFields.push(
@@ -102,9 +117,10 @@ module.exports = async (client) => {
           { name: "Status", value: `${icon} ${status}`, inline: true }
         );
 
-        // Fetch VMs and LXCs statuses
-        const vms = await fetchVMsStatus();
-        const lxcs = await fetchLXCsStatus();
+        const [vms, lxcs] = await Promise.all([
+          fetchVMsStatus(),
+          fetchLXCsStatus(),
+        ]);
 
         mainFields.push(
           { name: "\u200B", value: "\u200B", inline: true },
@@ -122,28 +138,7 @@ module.exports = async (client) => {
           serverConfig.port
         );
         const statusText = `${icon} ${status} (~${ping} ms)`;
-        // serverConfig.type === "website"
-        //   ? `${icon} ${status} (~${ping} ms)`
-        //   : `${icon} ${status} (IP: ${ip}) (~${ping} ms)`;
         detailFields.push({ name: serverConfig.hostname, value: statusText });
-
-        // Update Instatus component status
-        if (serverConfig.component_id) {
-          const newStatus =
-            statusData.status === 200
-              ? client.config.component_statuses[0]
-              : client.config.component_statuses[1];
-          await updateInstatusComponent(
-            serverConfig.component_id,
-            newStatus,
-            serverConfig.current_status || "", // Assume `current_status` is tracked in serverConfig
-            client.config.instatusApiUrl,
-            client.config.instatusApiToken,
-            client.config.instatusPageId
-          );
-          serverConfig.current_status = newStatus; // Update the current status
-          saveConfig(); // Save the updated status to the config
-        }
       }
 
       if (statusData.status !== 200) {
@@ -205,9 +200,7 @@ module.exports = async (client) => {
       const response = await axios.get(
         `${client.config.proxmoxApiUrl}/api2/json/nodes/proxmox/qemu`,
         {
-          headers: {
-            Authorization: `Bearer ${client.config.proxmoxApiToken}`,
-          },
+          headers: getProxmoxHeaders(),
         }
       );
       const vms = response.data.data.sort((a, b) => a.vmid - b.vmid); // Sort by vmid asc
@@ -230,9 +223,7 @@ module.exports = async (client) => {
       const response = await axios.get(
         `${client.config.proxmoxApiUrl}/api2/json/nodes/proxmox/lxc`,
         {
-          headers: {
-            Authorization: `Bearer ${client.config.proxmoxApiToken}`,
-          },
+          headers: getProxmoxHeaders(),
         }
       );
       const lxcs = response.data.data.sort((a, b) => a.vmid - b.vmid); // Sort by vmid asc
@@ -251,6 +242,20 @@ module.exports = async (client) => {
   }
 
   function saveConfig() {
-    fs.writeFileSync(configPath, JSON.stringify(client.config, null, 2));
+    if (!client.runtimeConfigPath) {
+      return;
+    }
+
+    client.runtimeConfig.messageIDs = client.config.messageIDs;
+    fs.writeFileSync(
+      client.runtimeConfigPath,
+      JSON.stringify(client.runtimeConfig, null, 2)
+    );
+  }
+
+  function getProxmoxHeaders() {
+    return {
+      Authorization: `PVEAPIToken=${client.config.proxmoxApiToken}`,
+    };
   }
 };

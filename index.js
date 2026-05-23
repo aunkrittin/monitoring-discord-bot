@@ -1,5 +1,7 @@
 const { Client, GatewayIntentBits } = require("discord.js");
-const config = require("./config.json");
+const { loadConfig } = require("./src/config");
+
+const { config, runtimeConfig, runtimeConfigPath } = loadConfig();
 
 async function startBot() {
   global.client = new Client({
@@ -12,9 +14,10 @@ async function startBot() {
   });
 
   client.config = config;
-  client.login(client.config.token);
-
+  client.runtimeConfig = runtimeConfig;
+  client.runtimeConfigPath = runtimeConfigPath;
   require("./src/loader"); // Ensure the loader is imported
+  await client.login(client.config.token);
 }
 
 startBot().catch((error) => {

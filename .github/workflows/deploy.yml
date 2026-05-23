@@ -1,0 +1,39 @@
+name: Deploy Bot
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-bot
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on:
+      - self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate config files
+        run: |
+          test -f .env
+          node -e "JSON.parse(require('fs').readFileSync('config.services.json', 'utf8'))"
+
+      - name: Restart bot
+        run: pm2 restart bot-discord --update-env
