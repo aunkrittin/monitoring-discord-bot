@@ -7,6 +7,12 @@ import {
   buildInitialMainEmbed,
   buildMainEmbed,
 } from "../src/embeds";
+import {
+  getMikroTikInterfaceStatus,
+  isMikroTikMonitorConfigured,
+  notifyMikroTikChanges,
+  toMikroTikRuntimeState,
+} from "../src/mikrotikMonitor";
 import { buildStatusSnapshot } from "../src/statusService";
 import type { BotClient } from "../src/types";
 
@@ -30,6 +36,7 @@ export default async function serverMonitor(client: BotClient): Promise<void> {
 
   await updateServerStatuses();
   cron.schedule("* * * * *", updateServerStatuses);
+  startMikroTikMonitor();
 
   async function createMainMessage(channel: TextChannel): Promise<void> {
     const mainMessage = await channel.send({ embeds: [buildInitialMainEmbed()] });
@@ -73,6 +80,57 @@ export default async function serverMonitor(client: BotClient): Promise<void> {
       console.error("Failed to update server statuses:", error);
     } finally {
       isUpdating = false;
+    }
+  }
+
+  function startMikroTikMonitor(): void {
+    if (!isMikroTikMonitorConfigured(client.config.mikrotik)) {
+      console.log("Skipping MikroTik monitor because SSH config is incomplete");
+      return;
+    }
+
+    let isPolling = false;
+    const pollIntervalMs = client.config.mikrotik.pollSeconds * 1000;
+
+    void pollMikroTik();
+    setInterval(() => {
+      void pollMikroTik();
+    }, pollIntervalMs);
+
+    async function pollMikroTik(): Promise<void> {
+      if (isPolling) {
+        console.log("Skipping MikroTik poll because the previous run is still active");
+        return;
+      }
+
+      isPolling = true;
+
+      try {
+        const notifyChannel = await client.channels.fetch(
+          client.config.mikrotik.notifyChannelId
+        );
+        if (!notifyChannel || !("send" in notifyChannel)) {
+          console.log("Skipping MikroTik alert because notify channel is invalid");
+          return;
+        }
+
+        const status = await getMikroTikInterfaceStatus(client.config.mikrotik);
+        const previous = client.runtimeConfig.mikrotikState;
+
+        await notifyMikroTikChanges(
+          notifyChannel as TextChannel,
+          client.config.mikrotik,
+          previous,
+          status
+        );
+
+        client.runtimeConfig.mikrotikState = toMikroTikRuntimeState(status);
+        saveRuntimeConfig();
+      } catch (error) {
+        console.error("Failed to poll MikroTik interface:", error);
+      } finally {
+        isPolling = false;
+      }
     }
   }
 

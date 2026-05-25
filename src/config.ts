@@ -44,12 +44,26 @@ export function loadConfig(): LoadedConfig {
       "PROXMOX_API_TOKEN",
       legacyConfig.proxmoxApiToken
     ),
+    mikrotik: {
+      host: getConfigValue("MIKROTIK_HOST"),
+      port: getNumberConfigValue("MIKROTIK_PORT", 22),
+      username: getConfigValue("MIKROTIK_USER"),
+      password: getConfigValue("MIKROTIK_PASSWORD"),
+      interfaceName: getConfigValue("MIKROTIK_MONITOR_INTERFACE", "ether3"),
+      pollSeconds: getNumberConfigValue("MIKROTIK_POLL_SECONDS", 60),
+      notifyChannelId: getConfigValue(
+        "MIKROTIK_NOTIFY_CHANNEL_ID",
+        getConfigValue("DISCORD_CHANNEL_ID", legacyConfig.channelId)
+      ),
+      mentionUserId: getConfigValue("MIKROTIK_NOTIFY_USER_ID", "188253611145297920"),
+    },
     data: servicesConfig.data || legacyConfig.data || {},
     messageIDs:
       runtimeConfig.messageIDs ||
       servicesConfig.messageIDs ||
       legacyConfig.messageIDs ||
       {},
+    mikrotikState: runtimeConfig.mikrotikState,
   };
 
   validateConfig(config);
@@ -58,6 +72,7 @@ export function loadConfig(): LoadedConfig {
     config,
     runtimeConfig: {
       messageIDs: config.messageIDs,
+      mikrotikState: config.mikrotikState,
     },
     runtimeConfigPath,
   };
@@ -111,6 +126,16 @@ function readJsonIfExists<T>(filePath: string): Partial<T> {
 
 function getConfigValue(envName: string, fallback?: string): string {
   return process.env[envName] || fallback || "";
+}
+
+function getNumberConfigValue(envName: string, fallback: number): number {
+  const value = process.env[envName];
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function validateConfig(config: BotConfig): void {

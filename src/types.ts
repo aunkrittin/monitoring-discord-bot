@@ -14,6 +14,7 @@ export interface RuntimeConfig {
     main?: string;
     detail?: string;
   };
+  mikrotikState?: MikroTikRuntimeState;
 }
 
 export interface BotConfig extends RuntimeConfig {
@@ -21,6 +22,7 @@ export interface BotConfig extends RuntimeConfig {
   channelId: string;
   proxmoxApiUrl: string;
   proxmoxApiToken: string;
+  mikrotik: MikroTikConfig;
   data: Record<string, ServiceConfig>;
 }
 
@@ -46,4 +48,28 @@ export interface MonitorResult {
 export interface ProxmoxStatusList {
   names: string[];
   statuses: string[];
+}
+
+export interface MikroTikConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  interfaceName: string;
+  pollSeconds: number;
+  notifyChannelId: string;
+  mentionUserId?: string;
+}
+
+export interface MikroTikRuntimeState {
+  status?: "up" | "down";
+  linkDowns?: number;
+  lastLinkDownTime?: string;
+  lastLinkUpTime?: string;
+}
+
+export interface MikroTikInterfaceStatus extends MikroTikRuntimeState {
+  interfaceName: string;
+  label?: string;
+  checkedAt: string;
 }
