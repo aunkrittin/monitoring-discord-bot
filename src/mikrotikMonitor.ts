@@ -15,7 +15,7 @@ export async function getMikroTikInterfaceStatus(
   const [detailOutput, monitorOutput] = await Promise.all([
     runSshCommand(
       config,
-      `/interface ethernet print detail without-paging where name=${config.interfaceName}`
+      `/interface print detail without-paging where name=${config.interfaceName}`
     ),
     runSshCommand(
       config,
@@ -156,14 +156,25 @@ function runSshCommand(config: MikroTikConfig, command: string): Promise<string>
 function parseMikroTikOutput(output: string): Record<string, string> {
   const values: Record<string, string> = {};
   for (const line of output.split(/\r?\n/)) {
+    const commentIndex = line.indexOf(";;;");
+    if (commentIndex !== -1 && !values.comment) {
+      values.comment = line.slice(commentIndex + 3).trim();
+    }
+
     const colonMatch = line.match(/^\s*([^:]+):\s*(.*?)\s*$/);
     if (colonMatch) {
       values[colonMatch[1].trim()] = colonMatch[2].trim();
       continue;
     }
 
-    for (const pair of line.matchAll(/([\w-]+)=("[^"]*"|\S+)/g)) {
-      values[pair[1]] = pair[2].replace(/^"|"$/g, "");
+    const matches = [...line.matchAll(/([\w-]+)=/g)];
+    for (let index = 0; index < matches.length; index += 1) {
+      const match = matches[index];
+      const nextMatch = matches[index + 1];
+      const key = match[1];
+      const valueStart = (match.index || 0) + match[0].length;
+      const valueEnd = nextMatch?.index ?? line.length;
+      values[key] = line.slice(valueStart, valueEnd).trim().replace(/^"|"$/g, "");
     }
   }
 
