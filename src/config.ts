@@ -56,6 +56,7 @@ export function loadConfig(): LoadedConfig {
         getConfigValue("DISCORD_CHANNEL_ID", legacyConfig.channelId)
       ),
       mentionUserId: getConfigValue("MIKROTIK_NOTIFY_USER_ID", "188253611145297920"),
+      notifyEnabled: process.env.MIKROTIK_NOTIFY_ENABLED !== "false",
     },
     data: servicesConfig.data || legacyConfig.data || {},
     messageIDs:

@@ -59,6 +59,7 @@ export interface MikroTikConfig {
   pollSeconds: number;
   notifyChannelId: string;
   mentionUserId?: string;
+  notifyEnabled: boolean;
 }
 
 export interface MikroTikRuntimeState {

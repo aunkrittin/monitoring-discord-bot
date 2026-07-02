@@ -44,6 +44,10 @@ export async function notifyMikroTikChanges(
   previous: MikroTikRuntimeState | undefined,
   current: MikroTikInterfaceStatus
 ): Promise<boolean> {
+  if (!config.notifyEnabled) {
+    return false;
+  }
+
   if (!previous?.status && previous?.linkDowns === undefined) {
     return false;
   }
